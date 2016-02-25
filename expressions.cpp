@@ -1,3 +1,9 @@
+/*
+*	Evaluation of Expressions in Parallel
+*	Nick Schrock
+*	CIS 452 
+*	2/24/2016
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,7 +17,6 @@
 
 using namespace std;
 
-int sig_flag = 0;
 pid_t g_pid;
 
 void handler(){
@@ -27,7 +32,7 @@ void parse_expression(string expression, vector<char>& op, vector<float>& num){
 	for(i=0; i<expression.size()-1; i++){
 		//Handle Spaces
 		if(expr[i] != ' '){
-			//Handle operatorsr
+			//Handle operators
 			if(expr[i] == '+' || expr[i] == '-' || expr[i] == '/' || expr[i] == '*'){
 				op.push_back(expr[i]);
 			}
@@ -161,7 +166,11 @@ float solve(vector<char>& ops, vector<int>& prec, vector<float>& nums, int loc, 
 				if(prec[index+1] < prec[index] && prec[index-1] < prec[index] ){
 					val = operate(nums[i], nums[i+1], ops[i]);
 					loc++;
-					printf("\nOperation #%d: \nOperator Handled: %c \nResult Returned= %f \nProcess ID %d \nParent Process ID: %d\n",loc-1, ops[i], val, getpid(), getppid());
+					printf("\nOperation #%d: 
+						\nOperator Handled: %c 
+						\nResult Returned= %f 
+						\nProcess ID %d 
+						\nParent Process ID: %d\n",loc-1, ops[i], val, getpid(), getppid());
 				}
 				//2. solve op num
 				//next op < current op and previous op > current op
@@ -169,7 +178,11 @@ float solve(vector<char>& ops, vector<int>& prec, vector<float>& nums, int loc, 
 					if(flag)
 						loc++;
 					val = operate(solve(ops, prec, nums, ++loc, 0), nums[i+1], ops[i]);
-					printf("\nOperation #%d: \nOperator Handled: %c \nResult Returned= %f \nProcess ID %d \nParent Process ID: %d\n",loc-1, ops[i], val, getpid(), getppid());
+					printf("\nOperation #%d: 
+						\nOperator Handled: %c 
+						\nResult Returned= %f 
+						\nProcess ID %d 
+						\nParent Process ID: %d\n",loc-1, ops[i], val, getpid(), getppid());
 				}
 				//3. num op solve
 				//next op > current op and previous op < current op
@@ -177,7 +190,11 @@ float solve(vector<char>& ops, vector<int>& prec, vector<float>& nums, int loc, 
 					if(flag)
 						loc++;
 					val = operate(nums[i], solve(ops, prec, nums, ++loc, 0), ops[i]);
-					printf("\nOperation #%d: \nOperator Handled: %c \nResult Returned= %f \nProcess ID %d \nParent Process ID: %d\n",loc-1, ops[i], val, getpid(), getppid());
+					printf("\nOperation #%d: 
+						\nOperator Handled: %c 
+						\nResult Returned= %f 
+						\nProcess ID %d 
+						\nParent Process ID: %d\n",loc-1, ops[i], val, getpid(), getppid());
 				}
 				//4. solve op solve
 				//next op and previous op > current op
@@ -189,7 +206,11 @@ float solve(vector<char>& ops, vector<int>& prec, vector<float>& nums, int loc, 
 					loc++;
 					float op2 = solve(ops, prec, nums, loc, 0);
 					val = operate(op1, op2, ops[i]);
-					printf("\nOperation #%d: \nOperator Handled: %c \nResult Returned= %f \nProcess ID %d \nParent Process ID: %d\n",loc-1, ops[i], val, getpid(), getppid());
+					printf("\nOperation #%d: 
+						\nOperator Handled: %c 
+						\nResult Returned= %f 
+						\nProcess ID %d 
+						\nParent Process ID: %d\n",loc-1, ops[i], val, getpid(), getppid());
 				}
 
 				//sleep(1);
@@ -239,7 +260,7 @@ float evaluate (string expr, bool immediate_result) {
 
 	printf("\nSolution Found: %f\n", solution);
 
-	return 0;
+	return solution;
   }
 
 
@@ -251,7 +272,7 @@ int main(){
 	answer = 5.0 + 45.0 * 3.0 - 2.0 / 4.0;
 	printf("\n\n\n\n\nThe actual answer is: %f\n\n", answer);
 	evaluate("5.0 + 45.0 * 3.0 - 2.0 / 4.0", true);
-	sig_flag = 0;
+	
 	answer = 5.0 + 45.0 - 23.0 * 24.0 / 3.0;
 	printf("\n\n\n\n\nThe actual answer is: %f\n\n", answer);
 	evaluate("5.0 + 45.0 - 23.0 * 24.0 / 3.0", true);
@@ -276,6 +297,10 @@ int main(){
 	printf("\n\n\n\n\nThe actual answer is: %f\n\n", answer);
 	evaluate("2.0 + 3.0 + 4.0 + 5.0", true);
 
+	printf ("Test 1 %f\n", evaluate ("2.0 * 3.0", true));
+  	printf ("Test 2 %f\n", evaluate ("200.0 + 300.0", true));
+  	printf ("Test 3 %f\n", evaluate ("10.0 / 5.0", true));
+  	printf ("Test 4 %f\n", evaluate ("16.0 - 10.5", true));
 	/*answer = 70.8 / 175.6 + 164.7 * 18.9 + 89.8 * 104.7 + 1.0 - 12455.2931891;
 	printf("\n\n\n\n\nThea actual answer is: %f\n\n", answer);
 	evaluate("70.8 / 175.6 + 164.7 * 18.9 + 89.8 * 104.7 + 1.0 - 12455.2931891", true);
