@@ -11,6 +11,12 @@
 
 using namespace std;
 
+int sig_flag = 0;
+
+void handler(){
+	sig_flag = 1;
+}
+
 void parse_expression(string expression, vector<char>& op, vector<float>& num){
 	unsigned int i = 0;
 	string num_string;
@@ -121,7 +127,7 @@ float solve(vector<char>& ops, vector<int>& prec, vector<float>& nums, int loc, 
 	int status;
 	unsigned int i;
 	int index;
-	
+	signal(SIGINT, (_sig_func_ptr)handler);
 	//Loop through each operaotr
 	for(i=0; i<ops.size(); i++){
 		index = i+1;
@@ -142,6 +148,7 @@ float solve(vector<char>& ops, vector<int>& prec, vector<float>& nums, int loc, 
 			//Child Process
 			else if(pid == 0){
 				float val;
+				
 				close(pipefd[0]);				
 
 				//1. num op num
@@ -149,7 +156,7 @@ float solve(vector<char>& ops, vector<int>& prec, vector<float>& nums, int loc, 
 				if(prec[index+1] < prec[index] && prec[index-1] < prec[index] ){
 					val = operate(nums[i], nums[i+1], ops[i]);
 					loc++;
-					//printf("\nCase 1: op%d %c val= %f Process ID %d\n",loc, ops[i], val, getpid());
+					printf("\nOperation #%d: \nOperator Handled: %c \nResult Returned= %f \nProcess ID %d \nParent Process ID: %d\n",loc-1, ops[i], val, getpid(), getppid());
 				}
 				//2. solve op num
 				//next op < current op and previous op > current op
@@ -157,7 +164,7 @@ float solve(vector<char>& ops, vector<int>& prec, vector<float>& nums, int loc, 
 					if(flag)
 						loc++;
 					val = operate(solve(ops, prec, nums, ++loc, 0), nums[i+1], ops[i]);
-					//printf("\nCase 2: op%d %c val= %f Process ID %d\n",loc, ops[i], val, getpid());
+					printf("\nOperation #%d: \nOperator Handled: %c \nResult Returned= %f \nProcess ID %d \nParent Process ID: %d\n",loc-1, ops[i], val, getpid(), getppid());
 				}
 				//3. num op solve
 				//next op > current op and previous op < current op
@@ -165,7 +172,7 @@ float solve(vector<char>& ops, vector<int>& prec, vector<float>& nums, int loc, 
 					if(flag)
 						loc++;
 					val = operate(nums[i], solve(ops, prec, nums, ++loc, 0), ops[i]);
-					//printf("\nCase 3: op%d %c val= %f Process ID %d\n",loc, ops[i], val, getpid());
+					printf("\nOperation #%d: \nOperator Handled: %c \nResult Returned= %f \nProcess ID %d \nParent Process ID: %d\n",loc-1, ops[i], val, getpid(), getppid());
 				}
 				//4. solve op solve
 				//next op and previous op > current op
@@ -177,9 +184,11 @@ float solve(vector<char>& ops, vector<int>& prec, vector<float>& nums, int loc, 
 					loc++;
 					float op2 = solve(ops, prec, nums, loc, 0);
 					val = operate(op1, op2, ops[i]);
-					//printf("\nCase 4: op%d %c val= %f Process ID %d\n",loc-1, ops[i], val, getpid());
+					printf("\nOperation #%d: \nOperator Handled: %c \nResult Returned= %f \nProcess ID %d \nParent Process ID: %d\n",loc-1, ops[i], val, getpid(), getppid());
 				}
 
+				sleep(1);
+				//while(!sig_flag);
 				write(pipefd[1], &val, sizeof(val));
 				close(pipefd[1]);
 				_exit(EXIT_SUCCESS);								
@@ -187,8 +196,10 @@ float solve(vector<char>& ops, vector<int>& prec, vector<float>& nums, int loc, 
 
 			//Parent Process
 			else{
+				//signal(SIGINT, handler);
 				float answer = 0;
 				wait(&status);
+				//if(sig_flag)
 				close(pipefd[1]);
 				read(pipefd[0], &answer, sizeof(answer));
 
@@ -234,7 +245,7 @@ int main(){
 	answer = 5.0 + 45.0 * 3.0 - 2.0 / 4.0;
 	printf("\n\n\n\n\nThe actual answer is: %f\n\n", answer);
 	evaluate("5.0 + 45.0 * 3.0 - 2.0 / 4.0", true);
-
+	sig_flag = 0;
 	answer = 5.0 + 45.0 - 23.0 * 24.0 / 3.0;
 	printf("\n\n\n\n\nThe actual answer is: %f\n\n", answer);
 	evaluate("5.0 + 45.0 - 23.0 * 24.0 / 3.0", true);
@@ -258,6 +269,38 @@ int main(){
 	answer = 2.0 + 3.0 + 4.0 + 5.0;
 	printf("\n\n\n\n\nThe actual answer is: %f\n\n", answer);
 	evaluate("2.0 + 3.0 + 4.0 + 5.0", true);
+
+	/*answer = 70.8 / 175.6 + 164.7 * 18.9 + 89.8 * 104.7 + 1.0 - 12455.2931891;
+	printf("\n\n\n\n\nThea actual answer is: %f\n\n", answer);
+	evaluate("70.8 / 175.6 + 164.7 * 18.9 + 89.8 * 104.7 + 1.0 - 12455.2931891", true);
+	answer = 18.6 - 82.5 - 70.4 * 5.3 + 134.7 / 103.9 * 5.0 + 492.537805582;
+	printf("\n\n\n\n\nThea actual answer is: %f\n\n", answer);
+	evaluate("18.6 - 82.5 - 70.4 * 5.3 + 134.7 / 103.9 * 5.0 + 492.537805582", true);
+	answer = 118.8 * 143.1 + 113.2 * 3.7 / 141.6 / 18.7 * 17.0 - 16939.9690087;
+	printf("\n\n\n\n\nThea actual answer is: %f\n\n", answer);
+	evaluate("118.8 * 143.1 + 113.2 * 3.7 / 141.6 / 18.7 * 17.0 - 16939.9690087", true);
+	answer = 46.0 + 38.4 - 46.8 + 6.0 * 38.1 + 126.4 + 7.0 - 335.6;
+	printf("\n\n\n\n\nThea actual answer is: %f\n\n", answer);
+	evaluate("46.0 + 38.4 - 46.8 + 6.0 * 38.1 + 126.4 + 7.0 - 335.6;", true);
+	answer = 74.1 * 191.5 + 168.9 - 182.7 / 126.5 + 171.3 * 1.0 - 14463.9057312;
+	printf("\n\n\n\n\nThea actual answer is: %f\n\n", answer);
+	evaluate("74.1 * 191.5 + 168.9 - 182.7 / 126.5 + 171.3 * 1.0 - 14463.90", true);
+	answer = 133.8 / 117.6 * 109.8 - 132.1 * 81.0 / 165.9 + 12.0 - 6.42822268148;
+	printf("\n\n\n\n\nThea actual answer is: %f\n\n", answer);
+	evaluate("133.8 / 117.6 * 109.8 - 132.1 * 81.0 / 165.9 + 12.0 - 6.42822", true);
+	answer = 78.1 + 112.3 - 196.8 * 78.5 - 192.7 * 26.2 / 9.0 + 15.371;
+	printf("\n\n\n\n\nThea actual answer is: %f\n\n", answer);
+	evaluate("78.1 + 112.3 - 196.8 * 78.5 - 192.7 * 26.2 / 9.0 + 15.37", true);
+	answer = 150.6 * 127.5 * 58.7 - 6.2 / 134.7 / 42.7 + 8.0 - 112.0;
+	printf("\n\n\n\n\nThea actual answer is: %f\n\n", answer);
+	evaluate("150.6 * 127.5 * 58.7 - 6.2 / 134.7 / 42.7 + 8.0 - 112.0", true);
+	answer = 167.0 * 145.7 / 106.8 * 57.2 / 72.9 + 30.1 / 19.0 - 111.345414371;
+	printf("\n\n\n\n\nThea actual answer is: %f\n\n", answer);
+	evaluate("167.0 * 145.7 / 106.8 * 57.2 / 72.9 + 30.1 / 19.0 - 111.3454", true);
+	answer = 155.1 + 168.8 * 129.5 / 86.0 - 77.3 + 94.3 - 20.0 - 336.281395349;
+	printf("\n\n\n\n\nThea actual answer is: %f\n\n", answer);
+	evaluate("155.1 + 168.8 * 129.5 / 86.0 - 77.3 + 94.3 - 20.0 - 336.2813", true);
+*/
 
 	return 0;
 
