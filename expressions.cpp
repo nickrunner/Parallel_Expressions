@@ -12,9 +12,11 @@
 using namespace std;
 
 int sig_flag = 0;
+pid_t g_pid;
 
 void handler(){
-	sig_flag = 1;
+	if(g_pid != 0)
+		kill(g_pid, SIGUSR1);
 }
 
 void parse_expression(string expression, vector<char>& op, vector<float>& num){
@@ -128,6 +130,7 @@ float solve(vector<char>& ops, vector<int>& prec, vector<float>& nums, int loc, 
 	unsigned int i;
 	int index;
 	signal(SIGINT, (_sig_func_ptr)handler);
+	signal(SIGUSR1, (_sig_func_ptr)handler);
 	//Loop through each operaotr
 	for(i=0; i<ops.size(); i++){
 		index = i+1;
@@ -141,10 +144,12 @@ float solve(vector<char>& ops, vector<int>& prec, vector<float>& nums, int loc, 
 			}
 			//Create child process
 			pid = fork();
+			g_pid = pid;
 			if(pid < 0){
 				perror("Fork Failure");
 				exit(EXIT_FAILURE);
 			}
+			
 			//Child Process
 			else if(pid == 0){
 				float val;
@@ -187,8 +192,9 @@ float solve(vector<char>& ops, vector<int>& prec, vector<float>& nums, int loc, 
 					printf("\nOperation #%d: \nOperator Handled: %c \nResult Returned= %f \nProcess ID %d \nParent Process ID: %d\n",loc-1, ops[i], val, getpid(), getppid());
 				}
 
-				sleep(1);
+				//sleep(1);
 				//while(!sig_flag);
+				pause();
 				write(pipefd[1], &val, sizeof(val));
 				close(pipefd[1]);
 				_exit(EXIT_SUCCESS);								
